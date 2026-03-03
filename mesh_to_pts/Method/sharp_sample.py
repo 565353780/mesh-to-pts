@@ -72,33 +72,35 @@ def sampleSharpEdgePoints(
     if total_length < 1e-12:
         return vertices[sharp_edges[:, 0]]
 
-    points_per_edge = np.maximum(
-        np.round(edge_lengths / total_length * num_points).astype(int), 1
-    )
-    # 调整使总点数接近 num_points（舍入和至少 1 点/边可能导致总和偏差）
-    current_total = points_per_edge.sum()
-    if current_total != num_points and sharp_edges.shape[0] > 0:
-        diff = num_points - current_total
-        if diff > 0:
-            idx = np.argsort(edge_lengths)[::-1]
-            for i in range(min(diff, len(idx))):
-                points_per_edge[idx[i]] += 1
-        else:
-            idx = np.argsort(edge_lengths)
-            for i in range(min(-diff, len(idx))):
-                j = idx[i]
-                if points_per_edge[j] > 1:
-                    points_per_edge[j] -= 1
+    n_edges = len(edge_lengths)
+
+    if num_points <= n_edges:
+        idx = np.argsort(edge_lengths)[::-1][:num_points]
+        points_per_edge = np.zeros(n_edges, dtype=int)
+        points_per_edge[idx] = 1
+    else:
+        points_per_edge = np.ones(n_edges, dtype=int)
+        remaining = num_points - n_edges
+        extra = (edge_lengths / total_length * remaining)
+        extra_int = extra.astype(int)
+        points_per_edge += extra_int
+
+        deficit = num_points - points_per_edge.sum()
+        if deficit > 0:
+            fractional = extra - extra_int
+            top_idx = np.argsort(fractional)[::-1][:deficit]
+            points_per_edge[top_idx] += 1
 
     all_points = []
-    for i in range(sharp_edges.shape[0]):
+    for i in range(n_edges):
         n = points_per_edge[i]
+        if n <= 0:
+            continue
         t = np.linspace(0.0, 1.0, n + 2)[1:-1].reshape(-1, 1)
         pts = (1.0 - t) * start[i] + t * end[i]
         all_points.append(pts)
 
-    sharp_edge_points = np.concatenate(all_points, axis=0)
+    if len(all_points) == 0:
+        return np.empty((0, 3), dtype=np.float64)
 
-    unique_pts = np.unique(sharp_edge_points, axis=0)
-
-    return unique_pts
+    return np.concatenate(all_points, axis=0)

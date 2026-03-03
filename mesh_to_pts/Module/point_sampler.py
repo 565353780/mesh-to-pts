@@ -233,7 +233,8 @@ class PointSampler(object):
 
         parts = []
         if num_surf > 0:
-            parts.append(PointSampler.sampleSurfPoints(mesh, num_points=num_surf))
+            surf_pts = PointSampler.sampleSurfPoints(mesh, num_points=num_surf)
+            parts.append(surf_pts)
         if num_edge > 0:
             sharp_edge_pts = PointSampler.sampleSharpEdgePoints(
                 mesh, angle_threshold=sharp_edge_angle, num_points=num_edge,
@@ -260,8 +261,6 @@ class PointSampler(object):
             merged_pts = PointSampler.addDepthSensorNoise(
                 merged_pts, depth_sensor_noise_ratio, depth_sensor_noise_scale,
             )
-
-        print('sample points num:', merged_pts.shape[0], 'vs target:', sample_point_num)
 
         if merged_pts.shape[0] < sample_point_num:
             deficit = sample_point_num - merged_pts.shape[0]
