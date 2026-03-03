@@ -8,6 +8,24 @@ class PointSampler(object):
         return
 
     @staticmethod
+    def sampleSurfPoints(
+        mesh: trimesh.Trimesh,
+        num_points: int,
+    ) -> np.ndarray:
+        """
+        使用trimesh在mesh表面均匀采样num_points个点
+
+        Args:
+            mesh (trimesh.Trimesh): 输入三角网格
+            num_points (int): 采样点数
+
+        Returns:
+            np.ndarray: [num_points, 3] 采样点坐标
+        """
+        points, _ = trimesh.sample.sample_surface(mesh, num_points)
+        return points
+
+    @staticmethod
     def sampleSharpEdgePoints(
         mesh: trimesh.Trimesh,
         angle_threshold: float,
@@ -191,3 +209,55 @@ class PointSampler(object):
 
         noisy_points[noisy_idx] = selected
         return noisy_points
+
+    @staticmethod
+    def sampleMeshPoints(
+        mesh: trimesh.Trimesh,
+        sample_point_num: int,
+        sharp_edge_angle: float=10.0,
+        sample_edge_ratio: float=0.5,
+        drop_ratio: float=0.5,
+        crop_ratio: float=0.5,
+        gauss_noise_ratio: float=0.5,
+        gauss_noise_scale: float=0.05,
+        depth_sensor_noise_ratio: float=0.5,
+        depth_sensor_noise_scale: float=0.05,
+    ) -> np.ndarray:
+        keep_fraction = (1.0 - drop_ratio) * (1.0 - crop_ratio)
+        keep_fraction = max(keep_fraction, 0.01)
+        total_needed = int(np.ceil(sample_point_num / keep_fraction))
+
+        edge_ratio = np.clip(sample_edge_ratio, 0.0, 1.0)
+        num_edge = int(np.round(total_needed * edge_ratio))
+        num_surf = total_needed - num_edge
+
+        surf_pts = PointSampler.sampleSurfPoints(mesh, num_points=max(num_surf, 1))
+
+        sharp_edge_pts = PointSampler.sampleSharpEdgePoints(
+            mesh, angle_threshold=sharp_edge_angle, num_points=max(num_edge, 1),
+        )
+
+        merged_pts = np.concatenate([surf_pts, sharp_edge_pts], axis=0)
+
+        if drop_ratio > 0:
+            merged_pts = PointSampler.dropPoints(merged_pts, drop_ratio)
+
+        if crop_ratio > 0:
+            merged_pts = PointSampler.cropPoints(merged_pts, crop_ratio)
+
+        if gauss_noise_ratio > 0 and gauss_noise_scale > 0:
+            merged_pts = PointSampler.addGaussNoise(
+                merged_pts, gauss_noise_ratio, gauss_noise_scale,
+            )
+
+        if depth_sensor_noise_ratio > 0 and depth_sensor_noise_scale > 0:
+            merged_pts = PointSampler.addDepthSensorNoise(
+                merged_pts, depth_sensor_noise_ratio, depth_sensor_noise_scale,
+            )
+
+        if merged_pts.shape[0] < sample_point_num:
+            deficit = sample_point_num - merged_pts.shape[0]
+            fill_pts = PointSampler.sampleSurfPoints(mesh, num_points=deficit)
+            merged_pts = np.concatenate([merged_pts, fill_pts], axis=0)
+
+        return merged_pts
