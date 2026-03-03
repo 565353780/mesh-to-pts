@@ -129,7 +129,7 @@ class PointSampler(object):
         lo, hi = p_min, p_max
         for _ in range(64):
             mid = (lo + hi) / 2.0
-            frac = MeshPointsSampler._clippedBoxVolumeFraction(
+            frac = PointSampler._clippedBoxVolumeFraction(
                 half_extents, normal, mid
             )
             if frac < crop_ratio:
