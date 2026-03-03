@@ -231,13 +231,19 @@ class PointSampler(object):
         num_edge = int(np.round(total_needed * edge_ratio))
         num_surf = total_needed - num_edge
 
-        merged_pts = PointSampler.sampleSurfPoints(mesh, num_points=max(num_surf, 1))
-
-        if sample_edge_ratio > 0:
+        parts = []
+        if num_surf > 0:
+            parts.append(PointSampler.sampleSurfPoints(mesh, num_points=num_surf))
+        if num_edge > 0:
             sharp_edge_pts = PointSampler.sampleSharpEdgePoints(
-                mesh, angle_threshold=sharp_edge_angle, num_points=max(num_edge, 1),
+                mesh, angle_threshold=sharp_edge_angle, num_points=num_edge,
             )
-            merged_pts = np.concatenate([merged_pts, sharp_edge_pts], axis=0)
+            parts.append(sharp_edge_pts)
+
+        if len(parts) == 0:
+            merged_pts = np.empty((0, 3), dtype=np.float64)
+        else:
+            merged_pts = np.concatenate(parts, axis=0)
 
         if drop_ratio > 0:
             merged_pts = PointSampler.dropPoints(merged_pts, drop_ratio)
@@ -254,6 +260,8 @@ class PointSampler(object):
             merged_pts = PointSampler.addDepthSensorNoise(
                 merged_pts, depth_sensor_noise_ratio, depth_sensor_noise_scale,
             )
+
+        print('sample points num:', merged_pts.shape[0], 'vs target:', sample_point_num)
 
         if merged_pts.shape[0] < sample_point_num:
             deficit = sample_point_num - merged_pts.shape[0]
