@@ -214,14 +214,14 @@ class PointSampler(object):
     def sampleMeshPoints(
         mesh: trimesh.Trimesh,
         sample_point_num: int,
-        sharp_edge_angle: float=10.0,
-        sample_edge_ratio: float=0.5,
-        drop_ratio: float=0.5,
-        crop_ratio: float=0.5,
-        gauss_noise_ratio: float=0.5,
-        gauss_noise_scale: float=0.05,
-        depth_sensor_noise_ratio: float=0.5,
-        depth_sensor_noise_scale: float=0.05,
+        sharp_edge_angle: float=30.0,
+        sample_edge_ratio: float=0,
+        drop_ratio: float=0,
+        crop_ratio: float=0,
+        gauss_noise_ratio: float=0,
+        gauss_noise_scale: float=0,
+        depth_sensor_noise_ratio: float=0,
+        depth_sensor_noise_scale: float=0,
     ) -> np.ndarray:
         keep_fraction = (1.0 - drop_ratio) * (1.0 - crop_ratio)
         keep_fraction = max(keep_fraction, 0.01)
@@ -231,13 +231,14 @@ class PointSampler(object):
         num_edge = int(np.round(total_needed * edge_ratio))
         num_surf = total_needed - num_edge
 
-        surf_pts = PointSampler.sampleSurfPoints(mesh, num_points=max(num_surf, 1))
+        merged_pts = PointSampler.sampleSurfPoints(mesh, num_points=max(num_surf, 1))
 
-        sharp_edge_pts = PointSampler.sampleSharpEdgePoints(
-            mesh, angle_threshold=sharp_edge_angle, num_points=max(num_edge, 1),
-        )
+        if sample_edge_ratio > 0:
+            sharp_edge_pts = PointSampler.sampleSharpEdgePoints(
+                mesh, angle_threshold=sharp_edge_angle, num_points=max(num_edge, 1),
+            )
 
-        merged_pts = np.concatenate([surf_pts, sharp_edge_pts], axis=0)
+            merged_pts = np.concatenate([merged_pts, sharp_edge_pts], axis=0)
 
         if drop_ratio > 0:
             merged_pts = PointSampler.dropPoints(merged_pts, drop_ratio)
