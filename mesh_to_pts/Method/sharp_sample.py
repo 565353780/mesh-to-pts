@@ -5,7 +5,7 @@ import numpy as np
 
 def sampleSharpEdges(
     mesh: trimesh.Trimesh,
-    angle_threshold: float=10.0,
+    angle_threshold: float,
 ) -> np.ndarray:
     '''
     return: [[v_start_idx_0, v_end_idx_0], ...] # Nx2 w/o repeat
@@ -51,8 +51,8 @@ def sampleSharpEdges(
 
 def sampleSharpEdgePoints(
     mesh: trimesh.Trimesh,
-    angle_threshold: float=10.0,
-    num_points: int=10000,
+    angle_threshold: float,
+    num_points: int,
 ) -> np.ndarray:
     '''
     return: sharp_edge_points # Nx3
