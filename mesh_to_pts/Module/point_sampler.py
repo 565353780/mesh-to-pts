@@ -237,7 +237,6 @@ class PointSampler(object):
             sharp_edge_pts = PointSampler.sampleSharpEdgePoints(
                 mesh, angle_threshold=sharp_edge_angle, num_points=max(num_edge, 1),
             )
-
             merged_pts = np.concatenate([merged_pts, sharp_edge_pts], axis=0)
 
         if drop_ratio > 0:
@@ -260,5 +259,10 @@ class PointSampler(object):
             deficit = sample_point_num - merged_pts.shape[0]
             fill_pts = PointSampler.sampleSurfPoints(mesh, num_points=deficit)
             merged_pts = np.concatenate([merged_pts, fill_pts], axis=0)
+
+        # 新增：如果点数超出了sample_point_num，则随机采样sample_point_num个点返回
+        if merged_pts.shape[0] > sample_point_num:
+            idx = np.random.choice(merged_pts.shape[0], sample_point_num, replace=False)
+            merged_pts = merged_pts[idx]
 
         return merged_pts
